@@ -18,7 +18,11 @@
 */
 package org.apache.cordova.device;
 
-import java.util.TimeZone;
+import java.util.TimeZone; 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+
 
 import org.apache.cordova.CordovaWebView;
 import org.apache.cordova.CallbackContext;
@@ -27,8 +31,13 @@ import org.apache.cordova.CordovaInterface;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.apache.cordova.LOG;
 
 import android.provider.Settings;
+import android.os.Build;
+import android.text.TextUtils;
+
+
 
 public class Device extends CordovaPlugin {
     public static final String TAG = "Device";
@@ -39,6 +48,7 @@ public class Device extends CordovaPlugin {
     private static final String ANDROID_PLATFORM = "Android";
     private static final String AMAZON_PLATFORM = "amazon-fireos";
     private static final String AMAZON_DEVICE = "Amazon";
+    private static final String LOG_TAG = "DEVICE_INFO";
 
     /**
      * Constructor.
@@ -72,11 +82,15 @@ public class Device extends CordovaPlugin {
             r.put("uuid", Device.uuid);
             r.put("version", this.getOSVersion());
             r.put("platform", this.getPlatform());
+            r.put("fingerprint ",Build.FINGERPRINT);
             r.put("model", this.getModel());
             r.put("manufacturer", this.getManufacturer());
-	        r.put("isVirtual", this.isVirtual());
+            r.put("brand ",Build.BRAND);
+            r.put("device ",Build.DEVICE);
+	        r.put("isVirtual", this.isVirtual() || this.getCpuInfo());
             r.put("serial", this.getSerialNumber());
             callbackContext.success(r);
+            LOG.d(LOG_TAG,r.toString());
         }
         else {
             return false;
@@ -114,22 +128,22 @@ public class Device extends CordovaPlugin {
     }
 
     public String getModel() {
-        String model = android.os.Build.MODEL;
+        String model = Build.MODEL;
         return model;
     }
 
     public String getProductName() {
-        String productname = android.os.Build.PRODUCT;
+        String productname = Build.PRODUCT;
         return productname;
     }
 
     public String getManufacturer() {
-        String manufacturer = android.os.Build.MANUFACTURER;
+        String manufacturer = Build.MANUFACTURER;
         return manufacturer;
     }
 
     public String getSerialNumber() {
-        String serial = android.os.Build.SERIAL;
+        String serial = Build.SERIAL;
         return serial;
     }
 
@@ -139,13 +153,13 @@ public class Device extends CordovaPlugin {
      * @return
      */
     public String getOSVersion() {
-        String osversion = android.os.Build.VERSION.RELEASE;
+        String osversion = Build.VERSION.RELEASE;
         return osversion;
     }
 
     public String getSDKVersion() {
         @SuppressWarnings("deprecation")
-        String sdkversion = android.os.Build.VERSION.SDK;
+        String sdkversion = Build.VERSION.SDK;
         return sdkversion;
     }
 
@@ -160,15 +174,72 @@ public class Device extends CordovaPlugin {
      * @return
      */
     public boolean isAmazonDevice() {
-        if (android.os.Build.MANUFACTURER.equals(AMAZON_DEVICE)) {
+        if (Build.MANUFACTURER.equals(AMAZON_DEVICE)) {
             return true;
         }
         return false;
     }
 
     public boolean isVirtual() {
-	return android.os.Build.FINGERPRINT.contains("generic") ||
-	    android.os.Build.PRODUCT.contains("sdk");
+        // 验证build信息内 true 模拟器 false 甄姬
+       return (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic"))
+            || Build.FINGERPRINT.startsWith("generic")
+            || Build.FINGERPRINT.startsWith("unknown")
+            || Build.HARDWARE.contains("goldfish")
+            || Build.HARDWARE.contains("ranchu")
+            || Build.MODEL.contains("google_sdk")
+            || Build.MODEL.contains("Emulator")
+            || Build.MODEL.contains("Android SDK built for x86")
+            || Build.MANUFACTURER.contains("Genymotion")
+            || Build.PRODUCT.contains("sdk_google")
+            || Build.PRODUCT.contains("sdk")
+            || Build.PRODUCT.contains("sdk_x86")
+            || Build.PRODUCT.contains("sdk_gphone64_arm64")
+            || Build.PRODUCT.contains("vbox86p")
+            || Build.PRODUCT.contains("vbox")
+            || Build.PRODUCT.contains("emulator")
+            || Build.PRODUCT.contains("simulator");
+    }
+
+    /**
+     * 根据CPU是否为电脑来判断是否为模拟器(子方法)
+     * 返回:false  真机
+     * true 模拟器 
+     */
+    public static boolean getCpuInfo() {
+        String result = "";
+        boolean flag = false;
+        try {
+            String[] args = {"/system/bin/cat", "/proc/cpuinfo"};
+            ProcessBuilder cmd = new ProcessBuilder(args);
+            Process process = cmd.start();
+            StringBuffer sb = new StringBuffer();
+            String readLine = "";
+            BufferedReader responseReader = new BufferedReader(new InputStreamReader(process.getInputStream(), "utf-8"));
+            while ((readLine = responseReader.readLine()) != null) {
+                sb.append(readLine);
+                if (!TextUtils.isEmpty(readLine)) {
+                    if (readLine.contains("Hardware")) {
+                        if (readLine.contains("placeholder")) {
+                            flag = true;
+                        }
+                    } else if (readLine.contains("Revision")) {
+                        if (readLine.contains("000b")) {
+                            flag = true;
+                        }
+                    }
+                }
+            }
+            responseReader.close();
+            result = sb.toString().toLowerCase();
+        } catch (IOException ex) {
+ 
+        } 
+        if(flag){
+            LOG.d(LOG_TAG,"getCpuInfo TRUE");
+        }
+        
+        return flag;
     }
 
 }

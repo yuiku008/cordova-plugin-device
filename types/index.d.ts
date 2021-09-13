@@ -30,6 +30,8 @@ interface Device {
     isVirtual: boolean;
     /** Get the device hardware serial number. */
     serial: string;
+    /** Get Platform all Info */
+    pltInfo:string;
 }
 
 declare var device: Device;
