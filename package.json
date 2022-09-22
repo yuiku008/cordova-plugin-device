@@ -1,10 +1,10 @@
 {
-  "name": "cordova-plugin-device",
-  "version": "2.0.4-dev",
+  "name": "cordova-plugin-device-hegui",
+  "version": "2.0.5-hegui",
   "description": "Cordova Device Plugin",
   "types": "./types/index.d.ts",
   "cordova": {
-    "id": "cordova-plugin-device",
+    "id": "cordova-plugin-device-hegui",
     "platforms": [
       "android",
       "ios",
