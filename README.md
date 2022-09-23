@@ -1,7 +1,5 @@
  
-## Properties 
-
-android 需要先调用 device.init()初始化。
+## Properties  
 
 - device.cordova
 - device.model
